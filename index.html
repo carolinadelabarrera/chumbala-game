@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#17152d" />
+    <link rel="icon" href="data:," />
+    <title>CHÚMBALA!</title>
+    <!-- The page shell must survive a missing/failed JavaScript module graph. -->
+    <style>
+      html, body { margin: 0; width: 100%; height: 100%; background: #17152d; color: #fff5d9; font-family: system-ui, sans-serif; overflow: hidden; }
+      #game { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+      #rotate-message, #loading-message { position: fixed; z-index: 100; left: 50%; transform: translateX(-50%); padding: 14px 18px; border: 2px solid #ffcf70; border-radius: 16px; background: #30284e; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
+      #rotate-message { display: none; top: 16px; top: max(16px, env(safe-area-inset-top, 0px)); }
+      #loading-message { top: 45%; width: 300px; }
+      #loading-message small { display: block; margin-top: 8px; }
+      html[data-startup="ready"] #loading-message { display: none; }
+      @media (orientation: portrait) and (any-pointer: coarse), (orientation: portrait) and (max-width: 600px) { #rotate-message { display: block; } }
+      html[data-mobile-portrait="true"] #rotate-message { display: block; }
+      html[data-mobile-portrait="false"] #rotate-message { display: none; }
+    </style>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="game" aria-label="CHÚMBALA! game"></main>
+    <aside id="rotate-message" role="status"><span aria-hidden="true">↻</span> Rotate to landscape</aside>
+    <aside id="loading-message" role="status">Loading CHÚMBALA!<small>If this stays visible, check the connection and reload.</small></aside>
+    <noscript>JavaScript is needed to load CHÚMBALA!.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
