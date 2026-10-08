@@ -41,3 +41,16 @@ canvas { display: block; }
 #rotate-message span { font-size: 26px; vertical-align: middle; margin-right: 6px; }
 @media (orientation: portrait) and (any-pointer: coarse) { .controls { visibility: hidden; } }
 html[data-mobile-portrait="true"] .controls { visibility: hidden; }
+.hud {
+  position: fixed; z-index: 10; pointer-events: none;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: calc(env(safe-area-inset-left, 0px) + 16px);
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  display: flex; justify-content: space-between; align-items: flex-start;
+  color: #fff5d9; font-size: clamp(24px, 4vh, 32px); font-weight: bold;
+}
+.heart-display, .candy-display { background: #30284eee; border-radius: 14px; padding: 4px 12px; }
+.heart-display { display: flex; gap: 8px; color: #ff86bd; font-size: 36px; line-height: 1.2; transform-origin: top left; }
+.candy-display { transform-origin: top right; }
+.heart-display .missing { color: transparent; -webkit-text-stroke: 2px #d2c6e7; }
+html[data-mobile-portrait="true"] .hud { visibility: hidden; }
