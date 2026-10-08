@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { TUNING } from '../config/tuning';
 import { Player } from '../entities/Player';
 import { Candy } from '../entities/Candy';
+import { Zombie } from '../entities/Zombie';
+import { SafePointSystem } from '../systems/SafePointSystem';
+import { DamageController } from '../systems/DamageController';
 import { HealthSystem } from '../systems/HealthSystem';
 import { CandySystem } from '../systems/CandySystem';
 import { HUD } from '../ui/HUD';
@@ -15,6 +18,10 @@ export class Level01Scene extends Phaser.Scene {
   player!: Player;
   health!: HealthSystem;
   candySystem!: CandySystem;
+  zombie!: Zombie;
+  damage!: DamageController;
+  safePoints!: SafePointSystem;
+  private gameplayTime = 0;
   private actions!: InputSystem;
   private controls!: TouchControls;
   private tutorial!: TutorialSystem;
@@ -24,6 +31,7 @@ export class Level01Scene extends Phaser.Scene {
   constructor() { super('Level01Scene'); }
 
   create(): void {
+    this.gameplayTime = 0;
     this.physics.world.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.moon = this.add.circle(1080, 110, 50, 0xffdf9b).setScrollFactor(0.3);
     const ground = this.physics.add.staticGroup();
@@ -51,6 +59,12 @@ export class Level01Scene extends Phaser.Scene {
     this.actions = new InputSystem(this);
     this.controls = new TouchControls(this.actions);
     this.tutorial = new TutorialSystem(this.controls);
+    this.zombie = new Zombie(this, LEVEL01.zombie.x, LEVEL01.zombie.y, LEVEL01.zombie);
+    this.physics.add.collider(this.zombie, ground);
+    this.safePoints = new SafePointSystem(LEVEL01.safePoints);
+    this.damage = new DamageController(this, this.player, this.zombie, this.health, this.safePoints,
+      // Drain queued jump presses while preserving a held movement finger.
+      () => { this.actions.snapshot(); });
     this.applyOrientation();
     this.cameras.main.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.cameras.main.startFollow(this.player, true, TUNING.camera.lerp, TUNING.camera.lerp);
@@ -63,12 +77,19 @@ export class Level01Scene extends Phaser.Scene {
     });
   }
 
-  update(now: number, delta: number): void {
+  update(_now: number, delta: number): void {
     this.applyOrientation();
     if (this.portrait) return;
     this.applyCameraPresentation();
-    this.player.updateMovement(now, this.actions.snapshot());
-    this.tutorial.update(delta, this.player);
+    this.gameplayTime += delta;
+    const actions = this.actions.snapshot();
+    if (!this.damage.rules.respawning) {
+      this.player.updateMovement(this.gameplayTime, actions);
+      this.tutorial.update(delta, this.player);
+      this.safePoints.update(this.player.x, this.player.grounded);
+      this.zombie.updateBehavior(this.gameplayTime, this.player.x);
+    }
+    this.damage.update(this.gameplayTime, delta);
   }
 
   private applyCameraPresentation(): void {

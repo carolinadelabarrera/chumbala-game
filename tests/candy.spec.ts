@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { LEVEL01 } from '../src/level/level01Layout';
 
 for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 }, { width: 740, height: 360 }]) {
   test(`candy overlap, HUD, healing and scene cleanup at ${viewport.width}`, async ({ browser }, testInfo) => {
@@ -63,17 +64,17 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     });
     await expect(hearts).toHaveAttribute('aria-label', '3 of 3 hearts');
     // Check actual camera world bounds and player visibility at both level ends.
-    for (const x of [24, 2276]) {
+    for (const x of [24, LEVEL01.width - 24]) {
       await page.evaluate(x => {
         const scene = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
         scene.player.body.reset(x, 528);
       }, x);
-      await expect.poll(() => page.evaluate(() => {
+      await expect.poll(() => page.evaluate(width => {
         const scene = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
         const view = scene.cameras.main.worldView;
         return scene.player.x - 24 >= view.x - 1 && scene.player.x + 24 <= view.right + 1
-          && view.x >= -1 && view.right <= 2301 && view.y >= -1 && view.bottom <= 721;
-      })).toBe(true);
+          && view.x >= -1 && view.right <= width + 1 && view.y >= -1 && view.bottom <= 721;
+      }, LEVEL01.width)).toBe(true);
     }
     if (viewport.width < 1000) {
       const presentation = await page.evaluate(() => {

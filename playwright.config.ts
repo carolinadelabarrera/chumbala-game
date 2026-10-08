@@ -5,8 +5,8 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:5173' },
   projects: [
-    { name: 'chromium', testMatch: ['smoke.spec.ts', 'mobile-startup.spec.ts', 'candy.spec.ts'], use: { browserName: 'chromium' } },
-    { name: 'webkit', testMatch: ['mobile-startup.spec.ts', 'candy.spec.ts'], use: { browserName: 'webkit' } },
+    { name: 'chromium', testMatch: ['smoke.spec.ts', 'mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts'], use: { browserName: 'chromium' } },
+    { name: 'webkit', testMatch: ['mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts'], use: { browserName: 'webkit' } },
   ],
   webServer: {
     command: 'npm run dev -- --port 5173 --strictPort',
