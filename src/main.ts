@@ -1,7 +1,9 @@
 import { updateOrientationMessage, watchViewport } from './ui/viewport';
+import { installGameGestureGuard } from './ui/gameGestures';
 
 updateOrientationMessage();
 watchViewport(updateOrientationMessage);
+installGameGestureGuard();
 
 export function startupStage(stage: string, detail = ''): void {
   document.documentElement.dataset.startup = stage;

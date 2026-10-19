@@ -9,7 +9,7 @@
     <!-- The page shell must survive a missing/failed JavaScript module graph. -->
     <style>
       html, body { margin: 0; width: 100%; height: 100%; background: #17152d; color: #fff5d9; font-family: system-ui, sans-serif; overflow: hidden; }
-      #game { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
+      #game { position: fixed; top: 0; right: 0; bottom: 0; left: 0; touch-action: none; }
       #rotate-message, #loading-message { position: fixed; z-index: 100; left: 50%; transform: translateX(-50%); padding: 14px 18px; border: 2px solid #ffcf70; border-radius: 16px; background: #30284e; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
       #rotate-message { display: none; top: 16px; top: max(16px, env(safe-area-inset-top, 0px)); }
       #loading-message { top: 45%; width: 300px; }

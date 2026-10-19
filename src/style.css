@@ -1,7 +1,8 @@
 :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #17152d; }
 * { box-sizing: border-box; }
 html, body { margin: 0; width: 100%; height: 100%; background: #17152d; overflow: hidden; overscroll-behavior: none; }
-body { touch-action: none; user-select: none; -webkit-user-select: none; }
+body { user-select: none; -webkit-user-select: none; }
+#game, #game canvas, .controls { touch-action: none; overscroll-behavior: none; }
 #game {
   position: fixed;
   z-index: 0;
@@ -21,6 +22,7 @@ canvas { display: block; }
   display: flex; justify-content: space-between; pointer-events: none;
 }
 .move-controls { display: flex; gap: 12px; }
+.action-controls { display: flex; gap: 12px; }
 .control {
   pointer-events: auto; touch-action: none; -webkit-touch-callout: none;
   width: clamp(64px, 10vw, 92px); height: clamp(64px, 18vh, 92px);
@@ -29,6 +31,11 @@ canvas { display: block; }
   box-shadow: 0 5px 0 #100d22;
 }
 .control.jump { width: clamp(94px, 15vw, 142px); font-size: 22px; }
+.control.give { width: clamp(94px, 15vw, 142px); font-size: 22px; border-color: #ffcf70; background: #544025ee; }
+.control[hidden] { display: none; }
+.pan-icon { display: block; position: relative; margin: 0 auto 2px; width: 30px; height: 24px; border-radius: 50%; background: #eab56b; }
+.pan-icon::before, .pan-icon::after { content: ''; position: absolute; left: 5px; top: 10px; width: 20px; height: 4px; border-radius: 4px; background: #fff0c5; transform: rotate(35deg); }
+.pan-icon::after { transform: rotate(-35deg); }
 .control.held { background: #685594; transform: translateY(3px); box-shadow: 0 2px 0 #100d22; }
 .control.hint { animation: gentle-pulse 1.4s ease-in-out infinite; }
 @keyframes gentle-pulse { 50% { border-color: #ffcf70; box-shadow: 0 0 0 7px #ffcf7040; } }

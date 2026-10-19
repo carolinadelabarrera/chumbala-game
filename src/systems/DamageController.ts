@@ -34,7 +34,7 @@ export class DamageController {
       return;
     }
     // Overlap detects contact without making the zombie a solid wall.
-    const overlapping = this.scene.physics.overlap(this.player, this.zombie);
+    const overlapping = this.zombie.behavior.canDamage() && this.scene.physics.overlap(this.player, this.zombie);
     if (this.rules.contact(overlapping, now, this.player.x, this.zombie.x)) {
       this.player.clearJumpTiming();
       this.player.setVelocity(this.rules.getKnockbackX(), TUNING.player.knockbackY);

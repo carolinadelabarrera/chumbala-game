@@ -3,8 +3,11 @@ import { TUNING } from '../config/tuning';
 import { Player } from '../entities/Player';
 import { Candy } from '../entities/Candy';
 import { Zombie } from '../entities/Zombie';
+import { Xolo } from '../entities/Xolo';
+import { XoloGuide } from '../systems/XoloGuide';
 import { SafePointSystem } from '../systems/SafePointSystem';
 import { DamageController } from '../systems/DamageController';
+import { GiveController } from '../systems/GiveController';
 import { HealthSystem } from '../systems/HealthSystem';
 import { CandySystem } from '../systems/CandySystem';
 import { HUD } from '../ui/HUD';
@@ -19,7 +22,10 @@ export class Level01Scene extends Phaser.Scene {
   health!: HealthSystem;
   candySystem!: CandySystem;
   zombie!: Zombie;
+  xolo!: Xolo;
+  xoloGuide!: XoloGuide;
   damage!: DamageController;
+  give!: GiveController;
   safePoints!: SafePointSystem;
   private gameplayTime = 0;
   private actions!: InputSystem;
@@ -46,6 +52,16 @@ export class Level01Scene extends Phaser.Scene {
     this.add.rectangle(LEVEL01.width / 2, LEVEL01.floorY, LEVEL01.width, 6, 0xc5b6e7);
     this.player = new Player(this, LEVEL01.spawn.x, LEVEL01.spawn.y);
     this.physics.add.collider(this.player, ground);
+    const shelf = LEVEL01.secret.shelf;
+    const nook = this.add.rectangle(shelf.x, shelf.y, shelf.width, shelf.height, 0x8979a6).setOrigin(0);
+    this.physics.add.existing(nook, true);
+    const nookBody = nook.body as Phaser.Physics.Arcade.StaticBody;
+    nookBody.updateFromGameObject();
+    // Only the top is solid: walking underneath and jumping through both work.
+    nookBody.checkCollision.down = false;
+    nookBody.checkCollision.left = false;
+    nookBody.checkCollision.right = false;
+    this.physics.add.collider(this.player, nook);
     this.health = new HealthSystem(this.events);
     this.candySystem = new CandySystem(this.health, this.events);
     const hud = new HUD(this.events, this.health, this.candySystem);
@@ -58,13 +74,29 @@ export class Level01Scene extends Phaser.Scene {
     });
     this.actions = new InputSystem(this);
     this.controls = new TouchControls(this.actions);
-    this.tutorial = new TutorialSystem(this.controls);
     this.zombie = new Zombie(this, LEVEL01.zombie.x, LEVEL01.zombie.y, LEVEL01.zombie);
     this.physics.add.collider(this.zombie, ground);
     this.safePoints = new SafePointSystem(LEVEL01.safePoints);
     this.damage = new DamageController(this, this.player, this.zombie, this.health, this.safePoints,
       // Drain queued jump presses while preserving a held movement finger.
-      () => { this.actions.snapshot(); });
+      () => { this.actions.snapshot(); this.resetXolo(); });
+    this.give = new GiveController(this, this.player, this.zombie, this.damage);
+    this.xolo = new Xolo(this);
+    this.xolo.behavior.reset(this.xoloFrame(), false);
+    this.xoloGuide = new XoloGuide(this.events, this.xolo.behavior);
+    this.xolo.present();
+    // Blueprint reward beat: one normal candy, using the existing health-only rule.
+    const revealCureCandy = () => {
+      candies.add(new Candy(this, 'first-cure-reward', this.zombie.x + 80, LEVEL01.floorY - TUNING.player.height / 2));
+    };
+    this.events.once('zombie:cured', revealCureCandy);
+    const revealSecret = () => {
+      for (const placement of LEVEL01.secret.candies) {
+        candies.add(new Candy(this, placement.id, placement.x, placement.y));
+      }
+    };
+    this.events.on('xolo:secretRevealed', revealSecret);
+    this.tutorial = new TutorialSystem(this.controls, this.events, this.give.rules);
     this.applyOrientation();
     this.cameras.main.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.cameras.main.startFollow(this.player, true, TUNING.camera.lerp, TUNING.camera.lerp);
@@ -72,6 +104,10 @@ export class Level01Scene extends Phaser.Scene {
     this.applyCameraPresentation();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       hud.destroy();
+      this.tutorial.destroy();
+      this.events.off('zombie:cured', revealCureCandy);
+      this.events.off('xolo:secretRevealed', revealSecret);
+      this.xoloGuide.destroy();
       this.controls.destroy();
       this.actions.destroy();
     });
@@ -89,7 +125,21 @@ export class Level01Scene extends Phaser.Scene {
       this.safePoints.update(this.player.x, this.player.grounded);
       this.zombie.updateBehavior(this.gameplayTime, this.player.x);
     }
+    this.give.update(this.gameplayTime, actions.givePressed);
     this.damage.update(this.gameplayTime, delta);
+    if (!this.damage.rules.respawning) this.xoloGuide.update(delta, this.xoloFrame());
+    this.xolo.present();
+  }
+
+  private xoloFrame() {
+    return { playerX: this.player.x, playerY: this.player.y,
+      playerFacing: (this.player.flipX ? -1 : 1) as -1 | 1,
+      zombieX: this.zombie.x, worldWidth: LEVEL01.width };
+  }
+
+  private resetXolo(): void {
+    this.xoloGuide.reset(this.xoloFrame());
+    this.xolo.present();
   }
 
   private applyCameraPresentation(): void {

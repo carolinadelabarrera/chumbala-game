@@ -15,6 +15,16 @@ export const TUNING = {
     hurtPulsePeriodMs: 600,
   },
   candy: { piecesPerHeart: 5 },
+  xolo: {
+    followDistance: 90, followSpeed: 210, catchUpSpeed: 300, catchUpDistance: 220,
+    stopTolerance: 12, recoveryDistance: 600, worldMargin: 40,
+    hintPauseMs: 1200, hintDurationMs: 4800, hintRepeatMs: 9000,
+    hintStep: 110, hintLeash: 260, barkVisualMs: 550,
+    hurtDurationMs: 650, celebrateDurationMs: 1200,
+    width: 76, height: 64, hopHeight: 22, hopPeriodMs: 400,
+    obstacleRamp: 64,
+    walkFrames: 8, walkStride: 72, walkBob: 2,
+  },
   zombie: {
     width: 56, height: 80,
     wanderSpeed: 45,
@@ -22,7 +32,11 @@ export const TUNING = {
     detectionRange: 280,
     noticeDurationMs: 300,
     postHitPauseMs: 650,
+    giveRange: 120,
+    eatDurationMs: 800,
+    cureDurationMs: 900,
   },
+  give: { cooldownMs: 450, offerDurationMs: 200, transferDurationMs: 450, noTargetFeedbackMs: 350 },
   respawn: { transitionMs: 700 },
   tutorial: {
     moveDelayMs: 2500,

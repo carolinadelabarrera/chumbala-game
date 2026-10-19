@@ -17,7 +17,12 @@ export class TouchControls {
     this.root.append(movement);
     this.createButton('left', '◀', 'Move left', movement);
     this.createButton('right', '▶', 'Move right', movement);
-    this.createButton('jump', '↑ JUMP', 'Jump', this.root);
+    const actions = document.createElement('div');
+    actions.className = 'action-controls';
+    this.root.append(actions);
+    this.createButton('jump', '↑ JUMP', 'Jump', actions);
+    this.createButton('give', 'GIVE', 'Give Pan de Muerto', actions);
+    this.setGiveAvailable(false);
     document.body.append(this.root);
     window.addEventListener('blur', this.releaseAll);
     document.addEventListener('visibilitychange', this.visibility);
@@ -28,6 +33,12 @@ export class TouchControls {
     button.type = 'button';
     button.className = `control ${action}`;
     button.textContent = icon;
+    if (action === 'give') {
+      const pan = document.createElement('span');
+      pan.className = 'pan-icon';
+      pan.setAttribute('aria-hidden', 'true');
+      button.prepend(pan);
+    }
     button.setAttribute('aria-label', label);
     button.dataset.action = action;
     button.addEventListener('pointerdown', event => {
@@ -51,8 +62,14 @@ export class TouchControls {
     if (button && ![...this.held.values()].includes(button)) button.classList.remove('held');
   }
 
-  hint(action: 'right' | 'jump', active: boolean): void {
+  hint(action: 'right' | 'jump' | 'give', active: boolean): void {
     this.buttons.get(action)?.classList.toggle('hint', active);
+  }
+
+  setGiveAvailable(enabled: boolean): void {
+    const button = this.buttons.get('give')!;
+    button.hidden = !enabled;
+    button.disabled = !enabled;
   }
 
   setPortrait(portrait: boolean): void {

@@ -55,6 +55,9 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     await page.evaluate(() => {
       const scene = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
       scene.player.body.reset(2450, 528);
+      // This fixture teleports several screens; stage the camera too. Normal
+      // scrolling is covered by smoke.spec.ts rather than this encounter test.
+      scene.cameras.main.centerOn(scene.player.x, scene.player.y);
     });
     await expect.poll(async () => (await state(page)).safe).toBe('preZombie');
     await expect.poll(() => page.evaluate(() => {

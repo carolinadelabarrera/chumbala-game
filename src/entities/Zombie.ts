@@ -19,6 +19,15 @@ export class Zombie extends Phaser.Physics.Arcade.Sprite {
       art.fillStyle(0xf1b374).fillRect(12, 63, 12, 12).fillRect(32, 63, 12, 12);
       art.fillStyle(0x30284e).fillRoundedRect(6, 73, 20, 7, 3).fillRoundedRect(30, 73, 20, 7, 3);
       art.generateTexture('zombie', TUNING.zombie.width, TUNING.zombie.height);
+      art.clear();
+      art.fillStyle(0xf1b374).fillRoundedRect(6, 1, 44, 39, 12);
+      art.fillStyle(0x30284e).fillCircle(18, 17, 3).fillCircle(38, 17, 3);
+      art.lineStyle(3, 0x30284e).beginPath().arc(28, 24, 9, 0, Math.PI).strokePath();
+      art.fillStyle(0xf1b374).fillRoundedRect(0, 39, 12, 22, 5).fillRoundedRect(44, 42, 12, 19, 5);
+      art.fillStyle(0xff86bd).fillRoundedRect(10, 39, 36, 24, 5);
+      art.fillStyle(0x57afc5).fillRect(12, 63, 12, 12).fillRect(32, 63, 12, 12);
+      art.fillStyle(0x30284e).fillRoundedRect(6, 73, 20, 7, 3).fillRoundedRect(30, 73, 20, 7, 3);
+      art.generateTexture('townsperson', TUNING.zombie.width, TUNING.zombie.height);
       art.destroy();
     }
     super(scene, x, y, 'zombie');
@@ -33,7 +42,9 @@ export class Zombie extends Phaser.Physics.Arcade.Sprite {
   updateBehavior(now: number, playerX: number): void {
     this.setVelocityX(this.behavior.update(now, this.x, playerX));
     this.setFlipX(this.behavior.facing > 0);
-    this.setAngle(this.behavior.state === 'POST_HIT_PAUSE' ? -9 : Math.sin(now / 200) * 3);
+    const state = this.behavior.state;
+    this.setAngle(state === 'POST_HIT_PAUSE' ? -9 : this.behavior.canReceivePan() || state === 'CELEBRATE' ? Math.sin(now / 200) * 3 : 0);
+    this.setTexture(this.behavior.isCured() ? 'townsperson' : 'zombie');
   }
 
   pauseAfterHit(now: number): void {
@@ -43,6 +54,7 @@ export class Zombie extends Phaser.Physics.Arcade.Sprite {
   }
 
   resetEncounter(): void {
+    if (!this.behavior.canReceivePan()) return;
     (this.body as Phaser.Physics.Arcade.Body).reset(this.spawnX, this.spawnY);
     this.setVelocity(0, 0).setAngle(0);
     this.behavior.reset();
