@@ -15,23 +15,38 @@ export class XoloGuide {
   secretResolved = false;
   private giveNeeded = false;
   private cured = false;
+  private checkpointReached = false;
   private activeHint?: XoloHint;
   private readonly events: GuideEvents;
   private readonly enabled = () => { this.giveNeeded = true; };
   private readonly gave = () => { this.giveNeeded = false; this.behavior.cancelHint(); };
   private readonly hurt = () => { this.behavior.reactHurt(); };
   private readonly cure = () => { this.cured = true; this.behavior.celebrate(); };
+  private readonly rest = () => {
+    this.checkpointReached = true;
+    this.giveNeeded = false;
+    this.secretResolved = true;
+    this.behavior.restAt(LEVEL01.ofrenda.xoloX);
+    this.syncHintEvents();
+  };
+  private readonly continued = () => this.behavior.resumeFollowing();
+  private readonly ending = () => this.behavior.celebrate();
 
   constructor(events: GuideEvents, behavior: XoloBehavior) {
     this.events = events;
     this.behavior = behavior;
-    events.on('give:enabled', this.enabled);
+    events.on('tutorial:giveReady', this.enabled);
     events.on('give:started', this.gave);
     events.on('player:hurt', this.hurt);
     events.on('zombie:cured', this.cure);
+    events.on('rest:started', this.rest);
+    events.on('rest:continued', this.continued);
+    events.on('ending:started', this.ending);
   }
 
   update(delta: number, frame: GuideFrame): void {
+    if (!this.checkpointReached && this.behavior.state === 'SIT_CHECKPOINT'
+      && frame.playerX < LEVEL01.ofrenda.guideStart) this.behavior.resumeFollowing();
     this.behavior.update(delta, frame);
     const secret = LEVEL01.secret;
     const investigated = frame.playerX >= secret.shelf.x && frame.playerX <= secret.shelf.x + secret.shelf.width
@@ -49,6 +64,10 @@ export class XoloGuide {
           this.events.emit('xolo:secretRevealed');
         }
       }
+    } else if (this.cured && !this.checkpointReached && frame.playerX >= LEVEL01.ofrenda.guideStart
+      && frame.playerX < LEVEL01.ending.start) {
+      if (this.behavior.hint === 'secret') this.behavior.cancelHint();
+      this.behavior.requestHint('ofrenda', frame, LEVEL01.ofrenda.xoloX);
     }
     this.syncHintEvents();
   }
@@ -58,11 +77,20 @@ export class XoloGuide {
     this.syncHintEvents();
   }
 
+  restoreCheckpoint(frame: XoloFrame): void {
+    this.cured = this.checkpointReached = this.secretResolved = this.secretRevealed = true;
+    this.giveNeeded = false;
+    this.reset(frame);
+  }
+
   destroy(): void {
-    this.events.off('give:enabled', this.enabled);
+    this.events.off('tutorial:giveReady', this.enabled);
     this.events.off('give:started', this.gave);
     this.events.off('player:hurt', this.hurt);
     this.events.off('zombie:cured', this.cure);
+    this.events.off('rest:started', this.rest);
+    this.events.off('rest:continued', this.continued);
+    this.events.off('ending:started', this.ending);
   }
 
   private syncHintEvents(): void {

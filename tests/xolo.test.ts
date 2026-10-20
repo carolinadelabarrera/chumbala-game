@@ -114,6 +114,7 @@ test('GIVE enablement triggers guide without changing eligibility; starting GIVE
   guide.update(TUNING.xolo.hurtDurationMs, teaching);
   assert.equal(behavior.hint, undefined, 'hurt alone cannot enable GIVE or its hint');
   give.enable();
+  events.emit('tutorial:giveReady');
   guide.update(16, teaching);
   assert.equal(behavior.hint, 'give');
   assert.equal(give.tryGive(0, 3450, 528, 2900, 520, zombie, true), false);
@@ -127,7 +128,7 @@ test('GIVE enablement triggers guide without changing eligibility; starting GIVE
 
 test('respawn reset drops stale hints and reaction timers, repositions, and defers new prompts', () => {
   const { guide, behavior, events } = companion();
-  events.emit('give:enabled');
+  events.emit('tutorial:giveReady');
   guide.update(16, { ...frame, playerX: 3450 });
   assert.equal(behavior.hint, 'give');
   guide.reset({ ...frame, playerX: 2350 });
@@ -168,7 +169,7 @@ test('secret is gated by cure, reveals once, uses normal candy healing, and can 
     }
     guide.update(16, { ...secretFrame, playerX: investigate ? 5300 : 5700, playerY: investigate ? 432 : 528 });
     assert.equal(guide.secretResolved, true);
-    assert.equal(behavior.hint, undefined);
+    assert.equal(behavior.hint, investigate ? undefined : 'ofrenda');
     guide.update(TUNING.xolo.hintRepeatMs, secretFrame);
     assert.equal(pickups.length, 2);
     assert.notEqual(behavior.state, 'HINT');

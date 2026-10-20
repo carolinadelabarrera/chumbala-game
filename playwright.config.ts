@@ -5,15 +5,15 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:5173' },
   projects: [
-    { name: 'chromium', testMatch: ['smoke.spec.ts', 'mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts', 'give.spec.ts', 'xolo.spec.ts'], use: { browserName: 'chromium' } },
+    { name: 'chromium', testMatch: ['smoke.spec.ts', 'mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts', 'give.spec.ts', 'xolo.spec.ts', 'ofrenda.spec.ts', 'save.spec.ts'], use: { browserName: 'chromium' } },
     {
       name: 'webkit',
-      testMatch: ['mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts', 'give.spec.ts', 'xolo.spec.ts'],
+      testMatch: ['mobile-startup.spec.ts', 'candy.spec.ts', 'zombie.spec.ts', 'give.spec.ts', 'xolo.spec.ts', 'ofrenda.spec.ts', 'save.spec.ts'],
       use: { browserName: 'webkit' },
       // Windows headless WebKit can render slowly while Phaser caps startup delta.
       // Allow wall-clock headroom without changing game time or weakening assertions.
-      timeout: 90_000,
-      expect: { timeout: 20_000 },
+      timeout: 120_000,
+      expect: { timeout: 40_000 },
     },
   ],
   webServer: {

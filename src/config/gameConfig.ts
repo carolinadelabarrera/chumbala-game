@@ -3,6 +3,7 @@ import { TUNING } from './tuning';
 import { BootScene } from '../scenes/BootScene';
 import { MenuScene } from '../scenes/MenuScene';
 import { Level01Scene } from '../scenes/Level01Scene';
+import { EndScene } from '../scenes/EndScene';
 
 export const GAME_SIZE = { width: 1280, height: 720 } as const;
 
@@ -19,5 +20,5 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
     default: 'arcade',
     arcade: { gravity: { x: 0, y: TUNING.player.gravity }, debug: false },
   },
-  scene: [BootScene, MenuScene, Level01Scene],
+  scene: [BootScene, MenuScene, Level01Scene, EndScene],
 };

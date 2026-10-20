@@ -132,12 +132,14 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     const rightBox = (await page.locator('[data-action="right"]').boundingBox())!;
     await page.mouse.move(rightBox.x + rightBox.width / 2, rightBox.y + rightBox.height / 2);
     await page.mouse.down();
-    await expect.poll(async () => (await state(page)).respawning).toBe(false);
-    await expect.poll(async () => (await state(page)).x, { intervals: [10] }).toBeGreaterThan(2350);
+    let recovered = await state(page);
+    await expect.poll(async () => {
+      recovered = await state(page);
+      return !recovered.respawning && recovered.x > 2350;
+    }, { intervals: [10] }).toBe(true);
     await page.mouse.up();
     await expect(page.locator('.heart-display')).toHaveAttribute('aria-label', '3 of 3 hearts');
     await expect(page.locator('.candy-display')).toHaveText('🍬 × 1/5');
-    const recovered = await state(page);
     expect(recovered.x).toBeGreaterThanOrEqual(2350);
     expect(recovered.x).toBeLessThan(2600);
     expect(recovered.zombieX).toBeGreaterThan(2750);

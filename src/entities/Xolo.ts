@@ -39,9 +39,19 @@ export class Xolo extends Phaser.GameObjects.Sprite {
         art.lineStyle(4, 0xffcf70).lineBetween(48, 43, 60, 43);
         art.restore();
       }
-      art.generateTexture('xolo', TUNING.xolo.width * (TUNING.xolo.walkFrames + 1), TUNING.xolo.height);
+      // One calm sitting pose after the existing standing/walk frames.
+      art.save().translateCanvas((TUNING.xolo.walkFrames + 1) * TUNING.xolo.width, 0);
+      art.fillStyle(0xc3adf2).fillEllipse(27, 49, 28, 26).fillRoundedRect(43, 35, 15, 27, 6)
+        .fillRoundedRect(44, 28, 28, 25, 9).fillRoundedRect(61, 39, 15, 12, 5);
+      art.fillTriangle(48, 34, 48, 10, 59, 32).fillTriangle(60, 31, 67, 8, 70, 37);
+      art.lineStyle(7, 0xc3adf2).lineBetween(21, 58, 36, 60).lineBetween(16, 52, 3, 47);
+      art.lineStyle(3, 0x30284e).lineBetween(58, 37, 66, 37);
+      art.fillStyle(0x30284e).fillCircle(73, 42, 3);
+      art.lineStyle(4, 0xffcf70).lineBetween(48, 51, 60, 51);
+      art.restore();
+      art.generateTexture('xolo', TUNING.xolo.width * (TUNING.xolo.walkFrames + 2), TUNING.xolo.height);
       const texture = scene.textures.get('xolo');
-      for (let frame = 0; frame <= TUNING.xolo.walkFrames; frame++) {
+      for (let frame = 0; frame <= TUNING.xolo.walkFrames + 1; frame++) {
         texture.add(frame, 0, frame * TUNING.xolo.width, 0, TUNING.xolo.width, TUNING.xolo.height);
       }
       art.destroy();
@@ -61,12 +71,14 @@ export class Xolo extends Phaser.GameObjects.Sprite {
     this.previousX = behavior.x;
     // Recovery is a relocation, not a very fast stride. Reactions keep their own pose.
     const walking = !behavior.recovered && Math.abs(travel) > 0.01
-      && (behavior.state === 'FOLLOW' || behavior.state === 'HINT');
+      && (behavior.state === 'FOLLOW' || behavior.state === 'HINT'
+        || (behavior.state === 'SIT_CHECKPOINT' && !behavior.sitting));
     if (walking) this.walkedDistance += Math.abs(travel);
     else this.walkedDistance = 0;
     const phase = this.walkedDistance / TUNING.xolo.walkStride * Math.PI * 2;
     this.setFrame(walking ? 1 + Math.floor(this.walkedDistance / TUNING.xolo.walkStride
       * TUNING.xolo.walkFrames) % TUNING.xolo.walkFrames : 0);
+    if (behavior.sitting) this.setFrame(TUNING.xolo.walkFrames + 1);
     const bob = walking ? Math.abs(Math.sin(phase)) * TUNING.xolo.walkBob : 0;
     const facing = walking ? Math.sign(travel) : behavior.facing;
     const obstacle = LEVEL01.obstacle;

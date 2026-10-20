@@ -19,8 +19,10 @@ test('Xolo walks through distinct leg poses, faces travel, and stands still at r
   await page.evaluate(() => {
     const s = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
     s.walkFrames = new Set();
+    s.sawLeftStride = false;
     s.events.on('postupdate', () => {
       if (s.xolo.behavior.state === 'FOLLOW') s.walkFrames.add(s.xolo.frame.name);
+      if (s.xolo.flipX && s.xolo.frame.name !== 0) s.sawLeftStride = true;
     });
   });
   await page.keyboard.down('ArrowRight');
@@ -35,8 +37,9 @@ test('Xolo walks through distinct leg poses, faces travel, and stands still at r
   expect(await page.evaluate(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').xolo.frame.name)).toBe(0);
   await page.keyboard.down('ArrowLeft');
   await expect.poll(() => page.evaluate(() => {
-    const xolo = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').xolo;
-    return xolo.flipX && xolo.frame.name !== 0;
+    // Record the stride per frame: host-side polling can miss a short turn
+    // before the player reaches the left world boundary and Xolo stops.
+    return (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').sawLeftStride;
   })).toBe(true);
   await page.keyboard.up('ArrowLeft');
   await expect.poll(async () => (await state(page)).state).toBe('WAIT');
@@ -185,7 +188,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     await page.keyboard.up('ArrowRight');
     expect((await state(page)).progress).toBe(4);
     expect((await state(page)).resolved).toBe(true);
-    expect((await state(page)).hint).toBeUndefined();
+    await expect.poll(async () => (await state(page)).hint).toBe('ofrenda');
     // Returning is allowed: ordinary jumping and Arcade overlaps collect both.
     await place(page, 5200);
     await page.waitForFunction(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').player.grounded);
@@ -199,7 +202,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
     await page.evaluate(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').scene.restart());
     await expect.poll(async () => (await state(page)).secret).toBe(false);
-    expect(await page.evaluate(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').events.listenerCount('give:enabled'))).toBe(1);
+    expect(await page.evaluate(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').events.listenerCount('tutorial:giveReady'))).toBe(1);
     expect(errors).toEqual([]);
     await context.close();
   });

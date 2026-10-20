@@ -4,8 +4,14 @@ import { Player } from '../entities/Player';
 import { Candy } from '../entities/Candy';
 import { Zombie } from '../entities/Zombie';
 import { Xolo } from '../entities/Xolo';
+import { CureGate } from '../entities/CureGate';
+import { Level01Progression } from '../systems/Level01Progression';
+import { SaveSystem } from '../systems/SaveSystem';
+import { Level01SaveCoordinator } from '../systems/Level01SaveCoordinator';
 import { XoloGuide } from '../systems/XoloGuide';
 import { SafePointSystem } from '../systems/SafePointSystem';
+import { CheckpointSystem } from '../systems/CheckpointSystem';
+import { FinaleController } from '../systems/FinaleController';
 import { DamageController } from '../systems/DamageController';
 import { GiveController } from '../systems/GiveController';
 import { HealthSystem } from '../systems/HealthSystem';
@@ -27,6 +33,9 @@ export class Level01Scene extends Phaser.Scene {
   damage!: DamageController;
   give!: GiveController;
   safePoints!: SafePointSystem;
+  checkpoints!: CheckpointSystem;
+  finale!: FinaleController;
+  progression!: Level01Progression;
   private gameplayTime = 0;
   private actions!: InputSystem;
   private controls!: TouchControls;
@@ -36,7 +45,11 @@ export class Level01Scene extends Phaser.Scene {
 
   constructor() { super('Level01Scene'); }
 
-  create(): void {
+  create(data: { resume?: boolean } = {}): void {
+    const saves = new SaveSystem();
+    const saved = saves.load();
+    const resume = data.resume && saved?.progress.checkpointId === LEVEL01.ofrenda.checkpoint.id ? saved : null;
+    const spawn = resume ? LEVEL01.ofrenda.checkpoint : LEVEL01.spawn;
     this.gameplayTime = 0;
     this.physics.world.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.moon = this.add.circle(1080, 110, 50, 0xffdf9b).setScrollFactor(0.3);
@@ -50,7 +63,7 @@ export class Level01Scene extends Phaser.Scene {
     const obstacle = LEVEL01.obstacle;
     solid(obstacle.x, LEVEL01.floorY - obstacle.height, obstacle.width, obstacle.height, 0xe7ad66);
     this.add.rectangle(LEVEL01.width / 2, LEVEL01.floorY, LEVEL01.width, 6, 0xc5b6e7);
-    this.player = new Player(this, LEVEL01.spawn.x, LEVEL01.spawn.y);
+    this.player = new Player(this, spawn.x, spawn.y);
     this.physics.add.collider(this.player, ground);
     const shelf = LEVEL01.secret.shelf;
     const nook = this.add.rectangle(shelf.x, shelf.y, shelf.width, shelf.height, 0x8979a6).setOrigin(0);
@@ -66,7 +79,7 @@ export class Level01Scene extends Phaser.Scene {
     this.candySystem = new CandySystem(this.health, this.events);
     const hud = new HUD(this.events, this.health, this.candySystem);
     const candies = this.physics.add.staticGroup();
-    for (const placement of LEVEL01.candies) {
+    for (const placement of resume ? [] : LEVEL01.candies) {
       candies.add(new Candy(this, placement.id, placement.x, placement.y));
     }
     this.physics.add.overlap(this.player, candies, (_player, candy) => {
@@ -77,7 +90,8 @@ export class Level01Scene extends Phaser.Scene {
     this.zombie = new Zombie(this, LEVEL01.zombie.x, LEVEL01.zombie.y, LEVEL01.zombie);
     this.physics.add.collider(this.zombie, ground);
     this.safePoints = new SafePointSystem(LEVEL01.safePoints);
-    this.damage = new DamageController(this, this.player, this.zombie, this.health, this.safePoints,
+    this.checkpoints = new CheckpointSystem(this.safePoints, this.health, this.events);
+    this.damage = new DamageController(this, this.player, this.zombie, this.health, this.checkpoints,
       // Drain queued jump presses while preserving a held movement finger.
       () => { this.actions.snapshot(); this.resetXolo(); });
     this.give = new GiveController(this, this.player, this.zombie, this.damage);
@@ -96,18 +110,43 @@ export class Level01Scene extends Phaser.Scene {
       }
     };
     this.events.on('xolo:secretRevealed', revealSecret);
-    this.tutorial = new TutorialSystem(this.controls, this.events, this.give.rules);
+    this.tutorial = new TutorialSystem(this.controls, this.events, this.give.rules,
+      saved?.tutorial.giveLearned ? { alreadyLearned: true } : { alreadyLearned: false, region: LEVEL01.giveTeaching });
+    this.progression = new Level01Progression(this.events);
+    const cureGate = new CureGate(this, this.player);
+    const saving = new Level01SaveCoordinator(saves, this.events, this.checkpoints, this.progression,
+      resume?.progress.levelCompleted);
+    this.finale = new FinaleController(this, this.player, this.zombie, this.actions, this.controls,
+      this.checkpoints, () => this.progression.canReachRest
+        && !this.damage.rules.respawning && !this.give.rules.busy);
+    if (resume) {
+      // Reconstruct domain meaning without replaying cure/activation events.
+      this.zombie.restoreCured();
+      this.progression.restoreCured();
+      cureGate.open();
+      this.checkpoints.restore(LEVEL01.ofrenda.checkpoint);
+      this.finale.restoreCheckpoint();
+      this.xoloGuide.restoreCheckpoint(this.xoloFrame());
+      this.xolo.present();
+      this.tutorial.restoreCheckpoint();
+      this.tutorial.update(0, this.player);
+    }
     this.applyOrientation();
     this.cameras.main.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.cameras.main.startFollow(this.player, true, TUNING.camera.lerp, TUNING.camera.lerp);
     this.cameras.main.setDeadzone(TUNING.camera.deadzoneWidth, TUNING.camera.deadzoneHeight);
     this.applyCameraPresentation();
+    if (resume) this.cameras.main.centerOn(spawn.x, spawn.y);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       hud.destroy();
       this.tutorial.destroy();
       this.events.off('zombie:cured', revealCureCandy);
       this.events.off('xolo:secretRevealed', revealSecret);
       this.xoloGuide.destroy();
+      this.finale.destroy();
+      cureGate.destroy();
+      this.progression.destroy();
+      saving.destroy();
       this.controls.destroy();
       this.actions.destroy();
     });
@@ -117,6 +156,13 @@ export class Level01Scene extends Phaser.Scene {
     this.applyOrientation();
     if (this.portrait) return;
     this.applyCameraPresentation();
+    if (this.finale.blocksGameplay) {
+      this.finale.update(delta);
+      if (!this.sys.isActive()) return;
+      this.xoloGuide.update(delta, this.xoloFrame());
+      this.xolo.present();
+      return;
+    }
     this.gameplayTime += delta;
     const actions = this.actions.snapshot();
     if (!this.damage.rules.respawning) {
@@ -129,6 +175,7 @@ export class Level01Scene extends Phaser.Scene {
     this.damage.update(this.gameplayTime, delta);
     if (!this.damage.rules.respawning) this.xoloGuide.update(delta, this.xoloFrame());
     this.xolo.present();
+    if (!this.damage.rules.respawning) this.finale.checkProgress();
   }
 
   private xoloFrame() {
@@ -169,7 +216,7 @@ export class Level01Scene extends Phaser.Scene {
       this.actions.reset();
       this.player.clearJumpTiming();
       if (portrait) this.physics.world.pause();
-      else this.physics.world.resume();
+      else if (!this.finale.blocksGameplay) this.physics.world.resume();
       if (import.meta.env.DEV) {
         window.dispatchEvent(new CustomEvent('chumbala:orientation', {
           detail: portrait ? 'portrait-suspended' : 'landscape-playing',

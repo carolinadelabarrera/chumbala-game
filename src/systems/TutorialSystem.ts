@@ -4,20 +4,17 @@ import type { Player } from '../entities/Player';
 import type { TouchControls } from '../ui/TouchControls';
 import type Phaser from 'phaser';
 import type { GiveSystem } from './GiveSystem';
+import { GiveTutorial, type GiveTeachingPolicy } from './GiveTutorial';
 
 export class TutorialSystem {
   private moved = false;
   private jumped = false;
   private elapsed = 0;
-  private firstDamage = false;
-  private gave = false;
-  private readonly hurt = () => { this.firstDamage = true; };
-  private readonly giveStarted = () => { this.gave = true; };
+  private readonly giveTutorial: GiveTutorial;
 
-  constructor(private readonly controls: TouchControls, private readonly events: Phaser.Events.EventEmitter,
-    private readonly give: GiveSystem) {
-    events.on('player:hurt', this.hurt);
-    events.on('give:started', this.giveStarted);
+  constructor(private readonly controls: TouchControls, events: Phaser.Events.EventEmitter,
+    private readonly give: GiveSystem, policy: GiveTeachingPolicy) {
+    this.giveTutorial = new GiveTutorial(give, events, policy);
   }
 
   update(delta: number, player: Player): void {
@@ -29,13 +26,14 @@ export class TutorialSystem {
     }
     this.controls.hint('right', !this.moved && this.elapsed >= TUNING.tutorial.moveDelayMs);
     this.controls.hint('jump', !this.jumped && player.x >= obstacle.x - TUNING.tutorial.approachDistance);
-    if (this.firstDamage && player.x >= LEVEL01.giveTeaching.start && player.x <= LEVEL01.giveTeaching.end) this.give.enable();
+    this.giveTutorial.update(player.x);
     this.controls.setGiveAvailable(this.give.enabled);
-    this.controls.hint('give', this.give.enabled && !this.gave);
+    this.controls.hint('give', this.giveTutorial.prompting);
   }
 
   destroy(): void {
-    this.events.off('player:hurt', this.hurt);
-    this.events.off('give:started', this.giveStarted);
+    this.giveTutorial.destroy();
   }
+
+  restoreCheckpoint(): void { this.moved = this.jumped = true; }
 }

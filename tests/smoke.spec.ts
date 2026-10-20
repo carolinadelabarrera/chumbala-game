@@ -72,7 +72,8 @@ test('desktop menu, tutorial, keyboard, obstacle, camera, and scaling', async ({
 test('coyote time and buffered input work on live Arcade bodies', async ({ page }) => {
   await enter(page);
   // Step off the tutorial platform without jumping, then jump after leaving its edge.
-  await place(page, 1198, 464);
+  // Leave six logical units of the inset body supported by the platform.
+  await place(page, 1190, 464);
   await expect.poll(async () => (await state(page)).grounded).toBe(true);
   await page.keyboard.down('ArrowRight');
   await expect.poll(async () => (await state(page)).grounded, { intervals: [5] }).toBe(false);

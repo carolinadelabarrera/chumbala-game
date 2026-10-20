@@ -36,15 +36,28 @@ export class Zombie extends Phaser.Physics.Arcade.Sprite {
     this.behavior = new ZombieBehavior(area);
     scene.add.existing(this);
     scene.physics.add.existing(this);
-    this.setSize(TUNING.zombie.width, TUNING.zombie.height).setCollideWorldBounds(true);
+    this.setSize(TUNING.zombie.bodyWidth, TUNING.zombie.bodyHeight).setCollideWorldBounds(true);
+    this.setOffset((TUNING.zombie.width - TUNING.zombie.bodyWidth) / 2,
+      TUNING.zombie.height - TUNING.zombie.bodyHeight);
+    // Bound the body in physics too, so a long frame cannot overshoot the leash.
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setBoundsRectangle(new Phaser.Geom.Rectangle(
+      area.encounterLeft - body.halfWidth, 0,
+      area.encounterRight - area.encounterLeft + body.width, scene.physics.world.bounds.height));
   }
 
   updateBehavior(now: number, playerX: number): void {
+    if (this.behavior.isCured()) this.setCollideWorldBounds(false);
     this.setVelocityX(this.behavior.update(now, this.x, playerX));
     this.setFlipX(this.behavior.facing > 0);
     const state = this.behavior.state;
     this.setAngle(state === 'POST_HIT_PAUSE' ? -9 : this.behavior.canReceivePan() || state === 'CELEBRATE' ? Math.sin(now / 200) * 3 : 0);
     this.setTexture(this.behavior.isCured() ? 'townsperson' : 'zombie');
+  }
+
+  restoreCured(): void {
+    this.behavior.restoreCured();
+    this.setVelocity(0, 0).setAngle(0).setTexture('townsperson').setCollideWorldBounds(false);
   }
 
   pauseAfterHit(now: number): void {

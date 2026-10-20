@@ -11,7 +11,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.setCollideWorldBounds(true);
-    this.setSize(TUNING.player.width, TUNING.player.height);
+    this.setSize(TUNING.player.bodyWidth, TUNING.player.bodyHeight);
+    this.setOffset((TUNING.player.width - TUNING.player.bodyWidth) / 2,
+      TUNING.player.height - TUNING.player.bodyHeight);
   }
 
   get grounded(): boolean {

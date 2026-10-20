@@ -1,7 +1,7 @@
 import { TUNING } from '../config/tuning.ts';
 
-export type XoloState = 'FOLLOW' | 'WAIT' | 'HINT' | 'REACT_HURT' | 'CELEBRATE';
-export type XoloHint = 'give' | 'secret';
+export type XoloState = 'FOLLOW' | 'WAIT' | 'HINT' | 'REACT_HURT' | 'CELEBRATE' | 'SIT_CHECKPOINT';
+export type XoloHint = 'give' | 'secret' | 'ofrenda';
 export interface XoloFrame {
   playerX: number;
   playerFacing: -1 | 1;
@@ -23,6 +23,7 @@ export class XoloBehavior {
   private hintOrigin = 0;
   private hintTarget = 0;
   private lookTarget = 0;
+  private restX = 0;
 
   reset(frame: XoloFrame, deferHints = true): void {
     this.x = this.followTarget(frame);
@@ -37,8 +38,8 @@ export class XoloBehavior {
   }
 
   requestHint(kind: XoloHint, frame: XoloFrame, targetX: number): boolean {
-    if (this.clock < this.nextHintAt || this.state === 'HINT'
-      || this.state === 'REACT_HURT' || this.state === 'CELEBRATE') return false;
+    if ((this.clock < this.nextHintAt && (kind !== 'ofrenda' || this.lastHint === kind)) || this.state === 'HINT'
+      || this.state === 'REACT_HURT' || this.state === 'CELEBRATE' || this.state === 'SIT_CHECKPOINT') return false;
     this.hint = kind;
     this.hintEmphasis = this.lastHint === kind ? 1.2 : 1;
     this.lastHint = kind;
@@ -61,6 +62,24 @@ export class XoloBehavior {
   reactHurt(): void { this.react('REACT_HURT'); }
   celebrate(): void { this.react('CELEBRATE'); }
 
+  restAt(x: number): void {
+    this.cancelHint();
+    this.restX = x;
+    this.state = 'SIT_CHECKPOINT';
+    this.elapsed = 0;
+  }
+
+  resumeFollowing(): void {
+    if (this.state !== 'SIT_CHECKPOINT') return;
+    this.state = 'FOLLOW';
+    this.elapsed = 0;
+    this.nextHintAt = this.clock + TUNING.xolo.hintRepeatMs;
+  }
+
+  get sitting(): boolean {
+    return this.state === 'SIT_CHECKPOINT' && Math.abs(this.x - this.restX) <= TUNING.xolo.stopTolerance;
+  }
+
   update(delta: number, frame: XoloFrame): void {
     this.clock += delta;
     this.elapsed += delta;
@@ -70,6 +89,11 @@ export class XoloBehavior {
       this.cancelHint();
       this.recovered = true;
     }
+    if (this.state === 'SIT_CHECKPOINT') {
+      if (!this.sitting) this.moveTo(this.clamp(this.restX, frame.worldWidth), TUNING.xolo.followSpeed, delta);
+      else this.lookAt(frame.playerX);
+      return;
+    }
     if (this.state === 'REACT_HURT' || this.state === 'CELEBRATE') {
       this.lookAt(frame.playerX);
       const duration = this.state === 'REACT_HURT' ? TUNING.xolo.hurtDurationMs : TUNING.xolo.celebrateDurationMs;
@@ -77,6 +101,22 @@ export class XoloBehavior {
       return;
     }
     if (this.state === 'HINT') {
+      if (this.hint === 'ofrenda') {
+        if (frame.playerX < this.hintOrigin - TUNING.xolo.hintLeash) {
+          this.cancelHint();
+          return;
+        } else {
+          const target = Math.min(this.lookTarget, frame.playerX + TUNING.xolo.guideLead);
+          const speed = this.x < frame.playerX ? TUNING.xolo.catchUpSpeed : TUNING.xolo.followSpeed;
+          this.moveTo(target, speed, delta);
+          // Lead only a short distance. When waiting, alternate destination/player glances.
+          if (Math.abs(this.x - target) <= TUNING.xolo.stopTolerance) {
+            this.lookAt(Math.floor(this.elapsed / TUNING.xolo.hintPauseMs) % 2 ? frame.playerX : this.lookTarget);
+          }
+          if (Math.abs(this.x - this.lookTarget) <= TUNING.xolo.stopTolerance) this.restAt(this.lookTarget);
+          return;
+        }
+      }
       if (this.elapsed >= TUNING.xolo.hintDurationMs
         || Math.abs(frame.playerX - this.hintOrigin) > TUNING.xolo.hintLeash) {
         this.cancelHint();

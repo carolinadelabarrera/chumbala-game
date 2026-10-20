@@ -4,6 +4,8 @@ export class TouchControls {
   private readonly root = document.createElement('nav');
   private readonly buttons = new Map<TouchAction, HTMLButtonElement>();
   private readonly held = new Map<number, HTMLButtonElement>();
+  private portrait = false;
+  private suspended = false;
   private readonly releaseAll = () => {
     for (const id of [...this.held.keys()]) this.release(id);
   };
@@ -73,9 +75,20 @@ export class TouchControls {
   }
 
   setPortrait(portrait: boolean): void {
-    this.root.hidden = portrait;
-    this.root.style.display = portrait ? 'none' : '';
-    if (portrait) this.releaseAll();
+    this.portrait = portrait;
+    this.applyVisibility();
+  }
+
+  setSuspended(suspended: boolean): void {
+    this.suspended = suspended;
+    this.applyVisibility();
+  }
+
+  private applyVisibility(): void {
+    const hidden = this.portrait || this.suspended;
+    this.root.hidden = hidden;
+    this.root.style.display = hidden ? 'none' : '';
+    if (hidden) this.releaseAll();
   }
 
   destroy(): void {

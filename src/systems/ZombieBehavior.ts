@@ -24,8 +24,9 @@ export class ZombieBehavior {
       if (now < this.resumeAt) return 0;
       this.state = 'WANDER';
     }
-    const detected = Math.abs(playerX - x) <= TUNING.zombie.detectionRange
-      && playerX >= this.area.encounterLeft && playerX <= this.area.encounterRight;
+    const inEncounter = playerX >= this.area.encounterLeft && playerX <= this.area.encounterRight;
+    const detected = inEncounter && (this.state === 'CHASE' || this.state === 'NOTICE_PLAYER'
+      || Math.abs(playerX - x) <= TUNING.zombie.detectionRange);
     if (detected) {
       this.facing = playerX < x ? -1 : 1;
       if (this.state === 'WANDER') {
@@ -36,7 +37,7 @@ export class ZombieBehavior {
         if (now < this.resumeAt) return 0;
         this.state = 'CHASE';
       }
-      if ((x <= this.area.encounterLeft && this.facing < 0)
+      if (Math.abs(playerX - x) < 1 || (x <= this.area.encounterLeft && this.facing < 0)
         || (x >= this.area.encounterRight && this.facing > 0)) return 0;
       return this.facing * TUNING.zombie.chaseSpeed;
     }
@@ -65,6 +66,7 @@ export class ZombieBehavior {
   }
 
   canDamage(): boolean { return this.canReceivePan(); }
+  restoreCured(): void { this.state = 'CURED'; this.resumeAt = 0; }
   isCured(): boolean { return this.state === 'CURED' || this.state === 'CELEBRATE'; }
 
   receivePan(playerX: number, zombieX: number): boolean {

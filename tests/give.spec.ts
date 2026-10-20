@@ -146,7 +146,8 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
     expect((await sceneState(page)).hazardous).toBe(false);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
     await page.evaluate(() => (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene').scene.restart());
-    await expect(give).not.toBeVisible();
+    // Fresh gameplay retains the tutorial skill that was persisted on valid GIVE.
+    await expect(give).toBeVisible();
     expect(errors).toEqual([]);
     await context.close();
   });

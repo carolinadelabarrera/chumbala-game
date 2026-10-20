@@ -3,7 +3,7 @@ import { TUNING } from '../config/tuning';
 import type { Player } from '../entities/Player';
 import type { Zombie } from '../entities/Zombie';
 import type { HealthSystem } from './HealthSystem';
-import type { SafePointSystem } from './SafePointSystem';
+import type { RespawnSource } from './CheckpointSystem';
 import { DamageSystem } from './DamageSystem';
 
 // Phaser presentation and physics responses; damage eligibility is pure logic.
@@ -15,15 +15,15 @@ export class DamageController {
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
   private readonly zombie: Zombie;
-  private readonly safePoints: SafePointSystem;
+  private readonly respawnPoints: RespawnSource;
   private readonly onRespawn: () => void;
 
   constructor(scene: Phaser.Scene, player: Player, zombie: Zombie, health: HealthSystem,
-    safePoints: SafePointSystem, onRespawn: () => void) {
+    respawnPoints: RespawnSource, onRespawn: () => void) {
     this.scene = scene;
     this.player = player;
     this.zombie = zombie;
-    this.safePoints = safePoints;
+    this.respawnPoints = respawnPoints;
     this.onRespawn = onRespawn;
     this.rules = new DamageSystem(health, scene.events);
   }
@@ -69,7 +69,7 @@ export class DamageController {
     const progress = Math.min(1, this.elapsedRespawn / TUNING.respawn.transitionMs);
     this.overlay?.setFillStyle(0xffc45c, Math.sin(progress * Math.PI) * 0.65);
     if (progress >= 0.5 && !this.relocated) {
-      const point = this.safePoints.getActive();
+      const point = this.respawnPoints.getActive();
       (this.player.body as Phaser.Physics.Arcade.Body).reset(point.x, point.y);
       this.player.setVelocity(0, 0).setAlpha(1);
       this.player.clearJumpTiming();

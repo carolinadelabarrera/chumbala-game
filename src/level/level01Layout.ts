@@ -1,5 +1,6 @@
 export const LEVEL01 = {
-  width: 5800,
+  id: 'level-01',
+  width: 7000,
   height: 720,
   floorY: 560,
   spawn: { x: 160, y: 500 },
@@ -11,6 +12,13 @@ export const LEVEL01 = {
   ],
   zombie: { x: 2900, y: 520, patrolLeft: 2800, patrolRight: 3050, encounterLeft: 2600, encounterRight: 3300 },
   giveTeaching: { start: 3400, end: 4100 },
+  cureGate: { x: 4250, width: 40 },
+  ofrenda: {
+    x: 6200, y: 560, triggerX: 6100, triggerWidth: 240,
+    checkpoint: { id: 'ofrenda', x: 6000, y: 528 },
+    xoloX: 6060, guideStart: 5650,
+  },
+  ending: { start: 6600 },
   secret: {
     noticeStart: 5000, ignoreEnd: 5600,
     shelf: { x: 5250, y: 464, width: 220, height: 18 },
