@@ -38,9 +38,12 @@ export class InputSystem {
   release(pointerId: number): void { this.pointers.delete(pointerId); }
 
   snapshot(): InputSnapshot {
-    const actions = new Set(this.pointers.values());
-    const left = this.keys.left.isDown || this.keys.a.isDown || actions.has('left');
-    const right = this.keys.right.isDown || this.keys.d.isDown || actions.has('right');
+    let left = this.keys.left.isDown || this.keys.a.isDown;
+    let right = this.keys.right.isDown || this.keys.d.isDown;
+    for (const action of this.pointers.values()) {
+      left ||= action === 'left';
+      right ||= action === 'right';
+    }
     const jumpPressed = this.jumpQueued;
     const givePressed = this.giveQueued;
     this.jumpQueued = false;

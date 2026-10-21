@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LEVEL01 } from '../src/level/level01Layout';
+import { TUNING } from '../src/config/tuning';
 
 for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 }, { width: 740, height: 360 }]) {
   test(`candy overlap, HUD, healing and scene cleanup at ${viewport.width}`, async ({ browser }, testInfo) => {
@@ -69,12 +70,13 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 852, height: 393 
         const scene = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
         scene.player.body.reset(x, 528);
       }, x);
-      await expect.poll(() => page.evaluate(width => {
+      await expect.poll(() => page.evaluate(({ width, height }) => {
         const scene = (window as any).__CHUMBALA_GAME__.scene.getScene('Level01Scene');
         const view = scene.cameras.main.worldView;
         return scene.player.x - 24 >= view.x - 1 && scene.player.x + 24 <= view.right + 1
-          && view.x >= -1 && view.right <= width + 1 && view.y >= -1 && view.bottom <= 721;
-      }, LEVEL01.width)).toBe(true);
+          && view.x >= -1 && view.right <= width + 1 && view.y >= -1 && view.bottom <= height + 1;
+      }, { width: LEVEL01.width,
+        height: LEVEL01.height + (viewport.width < 1000 ? TUNING.camera.phoneBottomPadding : 0) })).toBe(true);
     }
     if (viewport.width < 1000) {
       const presentation = await page.evaluate(() => {

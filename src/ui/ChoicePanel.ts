@@ -1,4 +1,4 @@
-import { isMobilePortrait } from './viewport';
+import { isMobilePortrait, watchViewport } from './viewport';
 
 interface Choice {
   id: string;
@@ -17,8 +17,23 @@ const ICONS = {
 // Only this panel owns input during rest; no timer chooses a button for the child.
 export class ChoicePanel {
   private readonly root = document.createElement('div');
+  private readonly pending = new Set<HTMLButtonElement>();
+  private readonly cancelled = new WeakSet<HTMLButtonElement>();
+  private readonly stopWatching: () => void;
+  private readonly invalidatePresses = () => {
+    for (const button of this.pending) this.cancelled.add(button);
+    this.pending.clear();
+  };
 
   constructor(label: string, choices: readonly Choice[], modal = false, mode: 'end' | 'menu' = 'end') {
+    let portrait = isMobilePortrait();
+    this.stopWatching = watchViewport(() => {
+      const next = isMobilePortrait();
+      if (portrait !== next) this.invalidatePresses();
+      portrait = next;
+    });
+    window.addEventListener('blur', this.invalidatePresses);
+    window.addEventListener('orientationchange', this.invalidatePresses);
     this.root.className = 'game-choice';
     this.root.dataset.mode = modal ? 'rest' : mode;
     this.root.setAttribute('role', modal ? 'dialog' : 'group');
@@ -39,8 +54,18 @@ export class ChoicePanel {
       const text = document.createElement('span');
       text.textContent = choice.label.toUpperCase();
       button.append(icon, text);
-      button.addEventListener('click', () => {
-        if (isMobilePortrait() || button.disabled) return;
+      button.addEventListener('pointerdown', () => {
+        this.pending.add(button);
+        this.cancelled.delete(button);
+        if (isMobilePortrait()) this.cancelled.add(button);
+      });
+      button.addEventListener('pointercancel', () => {
+        this.cancelled.add(button);
+        this.pending.delete(button);
+      });
+      button.addEventListener('click', event => {
+        if (isMobilePortrait() || button.disabled || (event.detail > 0 && this.cancelled.has(button))) return;
+        this.pending.delete(button);
         this.root.querySelectorAll('button').forEach(item => { item.disabled = true; });
         choice.select();
       });
@@ -52,5 +77,11 @@ export class ChoicePanel {
     if (mode === 'menu') this.root.querySelector('button')?.focus({ preventScroll: true });
   }
 
-  destroy(): void { this.root.remove(); }
+  destroy(): void {
+    this.stopWatching();
+    window.removeEventListener('blur', this.invalidatePresses);
+    window.removeEventListener('orientationchange', this.invalidatePresses);
+    this.pending.clear();
+    this.root.remove();
+  }
 }

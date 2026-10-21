@@ -21,7 +21,7 @@ import { LEVEL01 } from '../level/level01Layout';
 import { InputSystem } from '../systems/InputSystem';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { TouchControls } from '../ui/TouchControls';
-import { isMobilePortrait } from '../ui/viewport';
+import { isMobilePortrait, isTouchDevice } from '../ui/viewport';
 
 export class Level01Scene extends Phaser.Scene {
   player!: Player;
@@ -42,6 +42,7 @@ export class Level01Scene extends Phaser.Scene {
   private tutorial!: TutorialSystem;
   private moon!: Phaser.GameObjects.Arc;
   private portrait = false;
+  private phonePresentation?: boolean;
 
   constructor() { super('Level01Scene'); }
 
@@ -51,6 +52,7 @@ export class Level01Scene extends Phaser.Scene {
     const resume = data.resume && saved?.progress.checkpointId === LEVEL01.ofrenda.checkpoint.id ? saved : null;
     const spawn = resume ? LEVEL01.ofrenda.checkpoint : LEVEL01.spawn;
     this.gameplayTime = 0;
+    this.phonePresentation = undefined;
     this.physics.world.setBounds(0, 0, LEVEL01.width, LEVEL01.height);
     this.moon = this.add.circle(1080, 110, 50, 0xffdf9b).setScrollFactor(0.3);
     const ground = this.physics.add.staticGroup();
@@ -137,7 +139,10 @@ export class Level01Scene extends Phaser.Scene {
     this.cameras.main.setDeadzone(TUNING.camera.deadzoneWidth, TUNING.camera.deadzoneHeight);
     this.applyCameraPresentation();
     if (resume) this.cameras.main.centerOn(spawn.x, spawn.y);
+    const orientationChanged = () => this.player.clearJumpTiming();
+    window.addEventListener('orientationchange', orientationChanged);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('orientationchange', orientationChanged);
       hud.destroy();
       this.tutorial.destroy();
       this.events.off('zombie:cured', revealCureCandy);
@@ -190,17 +195,23 @@ export class Level01Scene extends Phaser.Scene {
   }
 
   private applyCameraPresentation(): void {
-    const touchDevice = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches;
-    const phoneLandscape = touchDevice && window.innerWidth > window.innerHeight
+    const phoneLandscape = isTouchDevice() && window.innerWidth > window.innerHeight
       && window.innerHeight <= TUNING.camera.phoneMaxShortSide;
     const camera = this.cameras.main;
     const zoom = phoneLandscape ? TUNING.camera.phoneLandscapeZoom : 1;
-    if (camera.zoom !== zoom) camera.setZoom(zoom);
-    camera.setLerp(TUNING.camera.lerp, phoneLandscape ? 0 : TUNING.camera.lerp);
+    if (this.phonePresentation !== phoneLandscape) {
+      this.phonePresentation = phoneLandscape;
+      camera.setZoom(zoom);
+      camera.setLerp(TUNING.camera.lerp, phoneLandscape ? 0 : TUNING.camera.lerp);
+      camera.setBounds(0, 0, LEVEL01.width, LEVEL01.height + (phoneLandscape ? TUNING.camera.phoneBottomPadding : 0));
+    }
     // Keep the mobile view bottom-aligned with the world. Zoom then raises the
     // floor above the controls without changing world geometry or jump physics.
     if (phoneLandscape) {
-      camera.setScroll(camera.scrollX, LEVEL01.height - camera.height / 2 - camera.height / (2 * zoom));
+      // Camera-only overscan reserves room for large controls/rest choices on
+      // short screens. Physics/world dimensions and jump clearance stay unchanged.
+      camera.setScroll(camera.scrollX, LEVEL01.height + TUNING.camera.phoneBottomPadding
+        - camera.height / 2 - camera.height / (2 * zoom));
     }
     // Preserve the decorative moon's screen height despite the zoomed crop.
     this.moon.y = phoneLandscape

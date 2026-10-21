@@ -9,13 +9,24 @@ export function startGame(onRendered: () => void): void {
       postBoot: booted => {
         booted.events.once(Phaser.Core.Events.POST_RENDER, onRendered);
         // Safari may deliver rotation before its safe-area layout has settled.
-        const refresh = () => requestAnimationFrame(() => {
-          if (!booted.isRunning) return;
-          booted.scale.getParentBounds();
-          booted.scale.refresh();
-        });
+        let frame: number | undefined;
+        const refresh = () => {
+          if (frame !== undefined) return;
+          frame = requestAnimationFrame(() => {
+            frame = undefined;
+            if (!booted.isRunning) return;
+            booted.scale.getParentBounds();
+            booted.scale.refresh();
+          });
+        };
         const stopWatching = watchViewport(refresh);
-        booted.events.once(Phaser.Core.Events.DESTROY, stopWatching);
+        const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(refresh);
+        observer?.observe(document.getElementById('game')!);
+        booted.events.once(Phaser.Core.Events.DESTROY, () => {
+          stopWatching();
+          observer?.disconnect();
+          if (frame !== undefined) cancelAnimationFrame(frame);
+        });
         refresh();
       },
     },

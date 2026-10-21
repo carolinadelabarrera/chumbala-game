@@ -1,7 +1,8 @@
-export function isMobilePortrait(): boolean {
-  const touchDevice = navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches;
-  return touchDevice && matchMedia('(orientation: portrait)').matches;
-}
+const coarsePointer = matchMedia('(pointer: coarse)');
+const portraitOrientation = matchMedia('(orientation: portrait)');
+
+export function isTouchDevice(): boolean { return navigator.maxTouchPoints > 0 || coarsePointer.matches; }
+export function isMobilePortrait(): boolean { return isTouchDevice() && portraitOrientation.matches; }
 
 export function updateOrientationMessage(): void {
   document.documentElement.dataset.mobilePortrait = String(isMobilePortrait());
@@ -12,13 +13,12 @@ export function watchViewport(onChange: () => void): () => void {
   window.addEventListener('orientationchange', onChange);
   window.addEventListener('pageshow', onChange);
   window.visualViewport?.addEventListener('resize', onChange);
-  const orientation = matchMedia('(orientation: portrait)');
-  orientation.addEventListener('change', onChange);
+  portraitOrientation.addEventListener('change', onChange);
   return () => {
     window.removeEventListener('resize', onChange);
     window.removeEventListener('orientationchange', onChange);
     window.removeEventListener('pageshow', onChange);
     window.visualViewport?.removeEventListener('resize', onChange);
-    orientation.removeEventListener('change', onChange);
+    portraitOrientation.removeEventListener('change', onChange);
   };
 }

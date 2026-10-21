@@ -4,6 +4,8 @@ export function installGameGestureGuard(): () => void {
   const inGame = (target: EventTarget | null): boolean => target instanceof Element
     && target.closest('#game, .controls') !== null;
   let gameTouchActive = false;
+  const clearTouches = () => { gameTouchActive = false; };
+  const visibility = () => { if (document.hidden) clearTouches(); };
   const updateTouches = (event: TouchEvent) => {
     gameTouchActive = Array.from(event.touches).some(touch => inGame(touch.target));
   };
@@ -15,6 +17,10 @@ export function installGameGestureGuard(): () => void {
     if ((inGame(event.target) || gameTouchActive) && event.cancelable) event.preventDefault();
   };
   const options = { capture: true, passive: false };
+  window.addEventListener('blur', clearTouches);
+  window.addEventListener('pagehide', clearTouches);
+  window.addEventListener('orientationchange', clearTouches);
+  document.addEventListener('visibilitychange', visibility);
   document.addEventListener('touchstart', preventMultiTouch, options);
   document.addEventListener('touchmove', preventMultiTouch, options);
   document.addEventListener('touchend', updateTouches, options);
@@ -23,6 +29,10 @@ export function installGameGestureGuard(): () => void {
     document.addEventListener(type, preventSafariGesture, options);
   }
   return () => {
+    window.removeEventListener('blur', clearTouches);
+    window.removeEventListener('pagehide', clearTouches);
+    window.removeEventListener('orientationchange', clearTouches);
+    document.removeEventListener('visibilitychange', visibility);
     document.removeEventListener('touchstart', preventMultiTouch, true);
     document.removeEventListener('touchmove', preventMultiTouch, true);
     document.removeEventListener('touchend', updateTouches, true);

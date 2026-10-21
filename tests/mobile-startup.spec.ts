@@ -39,10 +39,13 @@ test('gesture prevention is scoped to the game and controls without restricting 
     const retargeted = gesture(document, 'gesturechange');
     touch(game, 'touchend', []);
     const released = gesture(outside, 'gesturestart');
+    touch(game, 'touchstart', [canvas, control]);
+    window.dispatchEvent(new Event('blur'));
+    const interrupted = gesture(outside, 'gesturestart');
     const unrelated = touch(outside, 'touchstart', [outside, outside]);
     touch(outside, 'touchcancel', []);
     outside.remove();
-    return { scoped, single, multi, moved, retargeted, released, unrelated,
+    return { scoped, single, multi, moved, retargeted, released, interrupted, unrelated,
       bodyAction: getComputedStyle(document.body).touchAction,
       gameAction: getComputedStyle(document.querySelector('#game')!).touchAction,
       canvasAction: getComputedStyle(canvas).touchAction,
@@ -50,7 +53,7 @@ test('gesture prevention is scoped to the game and controls without restricting 
       viewport: document.querySelector('meta[name="viewport"]')!.getAttribute('content') };
   });
   expect(result).toMatchObject({ scoped: true, single: false, multi: true, moved: true,
-    retargeted: true, released: false, unrelated: false,
+    retargeted: true, released: false, interrupted: false, unrelated: false,
     bodyAction: 'auto', gameAction: 'none', canvasAction: 'none', controlAction: 'none' });
   expect(result.viewport).not.toMatch(/user-scalable\s*=\s*no|maximum-scale/i);
   expect(errors).toEqual([]);

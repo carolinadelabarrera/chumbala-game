@@ -38,7 +38,7 @@ export class HUD {
       this.hearts.append(icon);
     }
     this.root.append(this.hearts, this.candy);
-    document.body.append(this.root);
+    document.getElementById('game')!.append(this.root);
     this.healthChanged();
     this.candyCollected();
     events.on('health:changed', this.healthChanged);

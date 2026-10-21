@@ -51,5 +51,6 @@ export const TUNING = {
     deadzoneWidth: 160, deadzoneHeight: 120, lerp: 0.12,
     phoneLandscapeZoom: 1.3,
     phoneMaxShortSide: 500,
+    phoneBottomPadding: 40,
   },
 } as const;
